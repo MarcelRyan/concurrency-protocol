@@ -1,5 +1,8 @@
+try:
+    from typing import Dict, Tuple
+except ImportError:
+    from typing_extensions import Dict, Tuple
 from enum import Enum
-from typing import Dict, Tuple
 
 class LockType(Enum):
     SHARED = 1

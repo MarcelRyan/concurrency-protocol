@@ -1,4 +1,7 @@
-from typing import List, Dict
+try:
+    from typing import List, Dict
+except ImportError:
+    from typing_extensions import List, Dict
 from structs.transaction import Operation, Transaction
 
 class Schedule:
@@ -36,7 +39,7 @@ class Schedule:
         rep = '|'.join([f'{f"T{t.id}":^{col_width}}' for t in self.transactions])
         rep += '\n' + '|'.join(['-' * col_width for _ in self.transactions])
 
-        row: list[str] = list()
+        row: List[str] = list()
         for a in self.operations:
             row.clear()
             for t in self.transactions:

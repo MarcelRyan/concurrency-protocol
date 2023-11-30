@@ -1,6 +1,9 @@
-from structs.transaction import Operation, OperationType
-from typing import List
+try:
+    from typing import List
+except ImportError:
+    from typing_extensions import List
 import re
+from structs.transaction import Operation, OperationType
 
 def parseInput(input: str) -> List[Operation]:
     # Split input by ;

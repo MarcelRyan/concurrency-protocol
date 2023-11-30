@@ -1,4 +1,7 @@
-from typing import List
+try:
+    from typing import List
+except ImportError:
+    from typing_extensions import List
 from enum import Enum
 
 class OperationType(Enum):
