@@ -1,27 +1,27 @@
-from typing import List
-from structs.transaction import Action, Transaction
+from typing import List, Dict
+from structs.transaction import Operation, Transaction
 
 class Schedule:
-    def __init__(self, actions: List[Action]) -> None:
-        self.actions = actions
-        transaction_dict = {}
-        for action in actions:
-            if action.transaction_id not in transaction_dict.keys():
-                transaction_dict[action.transaction_id] = []
-            transaction_dict[action.transaction_id].append(action)
+    def __init__(self, operations: List[Operation]) -> None:
+        self.operations = operations.copy()
+        transaction_dict: Dict[int, List[Operation]] = dict()
+        for op in operations:
+            if op.transaction_id not in transaction_dict.keys():
+                transaction_dict[op.transaction_id] = list()
+            transaction_dict[op.transaction_id].append(op)
         
-        transactions = []
+        transactions: List[Transaction] = list()
         for key in transaction_dict.keys():
             transactions.append(Transaction(key, key, transaction_dict[key]))      
         self._transactions = transactions
     
     @property
-    def actions(self) -> List[Action]:
-        return self._actions
+    def operations(self) -> List[Operation]:
+        return self._operations
     
-    @actions.setter
-    def actions(self, value: List[Action]) -> None:
-        self._actions = value
+    @operations.setter
+    def operations(self, value: List[Operation]) -> None:
+        self._operations = value
 
     @property
     def transactions(self) -> List[Transaction]:
@@ -31,9 +31,16 @@ class Schedule:
     def transactions(self, value: List[Transaction]) -> None:
         self._transactions = value
 
+    def __repr__(self) -> str:
+        col_width = 12
+        rep = '|'.join([f'{f"T{t.id}":^{col_width}}' for t in self.transactions])
+        rep += '\n' + '|'.join(['-' * col_width for _ in self.transactions])
 
-    
-    
-    
-
+        row: list[str] = list()
+        for a in self.operations:
+            row.clear()
+            for t in self.transactions:
+                row.append(f'{str(a):^{col_width}}' if t.id == a.transaction_id else ' ' * col_width)
+            rep += '\n' + '|'.join(row)
         
+        return rep

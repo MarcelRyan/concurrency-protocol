@@ -1,8 +1,8 @@
-from structs.transaction import Action, ActionType
+from structs.transaction import Operation, OperationType
 from typing import List
 import re
 
-def parseInput(input: str) -> List[Action]:
+def parseInput(input: str) -> List[Operation]:
     # Split input by ;
     parsed_input = input.split(";")
 
@@ -14,19 +14,19 @@ def parseInput(input: str) -> List[Action]:
 
     # print(parsed_input)
 
-    action_list = []
+    operation_list = []
 
-    for action in parsed_input:
+    for op in parsed_input:
 
         pattern = re.compile(r'([RWC])(\d+)(?:\((\w*)\))?')
-        match = pattern.match(action)
+        match = pattern.match(op)
 
         if match:
-            action_type = ActionType.from_str(match.group(1))
+            op_type = OperationType.from_str(match.group(1))
             transaction_id = int(match.group(2)) 
-            data_item = match.group(3) if match.group(3) else ""
+            data_item = match.group(3) if match.group(3) else None
 
-            action = Action(transaction_id, action_type, data_item)
-            action_list.append(action)
+            op = Operation(transaction_id, op_type, data_item)
+            operation_list.append(op)
 
-    return action_list
+    return operation_list
