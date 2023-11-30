@@ -2,8 +2,8 @@ try:
     from typing import List, Dict
 except ImportError:
     from typing_extensions import List, Dict
-from core.cc.strategy import CCStrategy
 from structs.transaction import Operation, Transaction
+from core.cc.strategy import CCStrategy
 
 class Schedule:
     def __init__(self, operations: List[Operation]) -> None:

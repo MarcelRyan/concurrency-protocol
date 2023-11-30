@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from structs.schedule import Schedule
+
+# Import from structs.schedule
+class Schedule: ...
 
 class CCStrategy(ABC):
     @abstractmethod
