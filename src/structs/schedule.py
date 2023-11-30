@@ -2,6 +2,7 @@ try:
     from typing import List, Dict
 except ImportError:
     from typing_extensions import List, Dict
+from core.cc.strategy import CCStrategy
 from structs.transaction import Operation, Transaction
 
 class Schedule:
@@ -33,6 +34,9 @@ class Schedule:
     @transactions.setter
     def transactions(self, value: List[Transaction]) -> None:
         self._transactions = value
+
+    def apply_cc(self, strategy: CCStrategy) -> None:
+        strategy.accept(self)
 
     def __repr__(self) -> str:
         col_width = 12
