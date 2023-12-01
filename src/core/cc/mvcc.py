@@ -4,7 +4,7 @@ except:
     from typing_extensions import Dict, List, Set
 from core.cc.strategy import CCStrategy
 from structs.schedule import Schedule
-from structs.transaction import OperationType
+from structs.transaction import Operation, OperationType
 
 class _Version:
     def __init__(self, data_item: str, version: int, read_t: int, write_t: int) -> None:
@@ -19,8 +19,6 @@ class _Version:
 class MultiversionTimestampCC(CCStrategy):
     def accept(self, schedule: Schedule) -> None:
         versions: Dict[str, List[_Version]] = dict()
-        abort_set: Set[int] = set()
-        commit_set: Set[int] = set()
         
         # Get initial timestamp as one unit before the smallest transaction timestamp
         init_t = min([t for t in list(map(lambda t: t.timestamp, schedule.transactions.values()))]) - 1
@@ -34,18 +32,17 @@ class MultiversionTimestampCC(CCStrategy):
         print('\n'.join([f'{dat}: ' + repr(ver) for dat, ver in versions.items()]))
 
         print('Beginning MVCC protocol...')
-        while True:
-            print('  Beginning next pass...')
-            for op in schedule.operations:
-                # Ignore operations of aborted and committed transactions
-                if op.transaction_id in abort_set or op.transaction_id in commit_set: continue
+        i = 0
+        sched_len = len(schedule.operations)
+        for i in range(sched_len):
+            op = schedule.operations[i]
 
+            # Check the type of this operation
+            if op.op_type == OperationType.COMMIT:
                 # Commit this transaction
-                if op.op_type == OperationType.COMMIT:
-                    commit_set.add(op.transaction_id)
-                    print(f'    {op}: Commit transaction T{op.transaction_id}')
-                    continue
-                
+                print(f'    {op}: Commit transaction T{op.transaction_id}')
+            
+            else:
                 # Find the latest version with less or equal WTS to this transaction's TS
                 ts = schedule.transactions[op.transaction_id].timestamp
                 ver = max(
@@ -69,7 +66,20 @@ class MultiversionTimestampCC(CCStrategy):
                         # This version already has a newer transaction reading its value:
                         # Rollback the current transaction
                         print(f'    {op}: Rollback transaction T{op.transaction_id}')
-                        abort_set.add(op.transaction_id)
+
+                        # Remove this transaction's operations from the schedule
+                        to_abort: List[Operation] = list()
+                        for j in range(len(schedule.operations) - 1, -1, -1):
+                            if schedule.operations[j].transaction_id == op.transaction_id:
+                                to_abort.insert(0, schedule.operations.pop(j))
+                                if j <= i: i -= 1
+                        
+                        # Append the operations at the end of the schedule and update the
+                        # corresponding transaction's timestamp
+                        schedule.operations += to_abort
+                        new_ts = max(list(map(lambda t: t.timestamp, schedule.transactions.values()))) + 1
+                        schedule.transactions[op.transaction_id].timestamp = new_ts
+
                     elif ver.write_t == ts:
                         # Overwrite the content of this version
                         print(f'    {op}: Overwrite data at {ver}')
@@ -79,27 +89,8 @@ class MultiversionTimestampCC(CCStrategy):
                         new_ver = _Version(op.data_item, len(versions[op.data_item]), ts, ts)
                         versions[op.data_item].append(new_ver)
                         print(f'    {op}: Add new version {new_ver}')
-            
-            print(f'  End of pass: {len(abort_set)} transactions aborted')
-
-            # Break if no transactions were aborted
-            if len(abort_set) == 0: break
-
-            # Collect operations of aborted transactions and reschedule
-            for id in abort_set:
-                # Filter out aborted operations
-                ops = list(filter(lambda op: op.transaction_id == id, schedule.operations))
-                for op in ops: schedule.operations.remove(op)
-
-                # Append the operations at the end of the schedule
-                schedule.operations += ops
-
-                # Bump the transaction timestamp
-                new_ts = max(list(map(lambda t: t.timestamp, schedule.transactions.values()))) + 1
-                schedule.transactions[id].timestamp = new_ts
-
-                print(f'    T{id}: Bumped timestamp to {new_ts}, rescheduled {len(ops)} operations')
-            abort_set.clear()
+            # Move to the next operation
+            i += 1
         print('MVCC protocol finished')
             
         print('Final versions:')
