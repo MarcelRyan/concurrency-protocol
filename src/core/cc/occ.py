@@ -13,7 +13,7 @@ class _State:
         self.startTS = startTS
         self.validationTS = validationTS
         self.finishTS = finishTS
-        self.read_set = []
+        self.read_set: List[Operation] = []
         self.write_set: List[Operation] = []
     
 class OptimisticCC(CCStrategy):
@@ -41,7 +41,7 @@ class OptimisticCC(CCStrategy):
             print(f"Validating transaction {tr}...")
 
             # Set validationTS in the time commit
-            transaction_ts[tr].validationTS = schedule.operations.index(schedule.transactions[tr].operations[-1])
+            transaction_ts[tr].validationTS = preExecutedOp.index(schedule.transactions[tr].operations[-1])
 
             # If first transaction, automatically validated
             if transaction_ts[tr].isFirstTr:
@@ -55,6 +55,7 @@ class OptimisticCC(CCStrategy):
                 while not success:
 
                     # Check if data used was updated in previous transaction
+                    # print(preExecutedOp)
                     for executed in executedTr:
                         if transaction_ts[executed.id].finishTS < transaction_ts[tr].startTS:
                             success = True
@@ -74,7 +75,7 @@ class OptimisticCC(CCStrategy):
                     
                     # Rollback
                     if not success:
-                        print(f"Abort, restarting transaction {tr} at timestamp {transaction_ts[executed.id].finishTS + 1}")
+                        print(f"Abort, restarting transaction {tr} to after transaction {executed.id} at timestamp {transaction_ts[executed.id].finishTS + 1}")
                         transaction_ts[tr].startTS = transaction_ts[executed.id].finishTS + 1
                         transaction_ts[tr].validationTS += (transaction_ts[executed.id].finishTS + 1 - transaction_ts[tr].startTS)
 
