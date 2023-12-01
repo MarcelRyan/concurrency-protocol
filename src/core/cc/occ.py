@@ -19,43 +19,43 @@ class _State:
 class OptimisticCC(CCStrategy):
     def accept(self, schedule: Schedule) -> None:
         transaction_ts: Dict[int, _State] = dict()
+        preExecutedOp: List[Operation] = schedule.operations
+        executedTr: List[Transaction] = []
 
+        # Setting initial/default timestamps
         for tr in schedule.transactions.keys():
             transaction_ts[tr] = _State(schedule.operations.index(schedule.transactions[tr].operations[0]), 0, 0)
         
+        # Marking first transaction
         transaction_ts[schedule.operations[0].transaction_id].isFirstTr = True
-        preExecutedOp: List[Operation] = schedule.operations
 
+        # Read Phase
         for op in schedule.operations:
             if op.op_type == OperationType.READ:
                 transaction_ts[op.transaction_id].read_set.append(op)
             elif op.op_type == OperationType.WRITE:
                 transaction_ts[op.transaction_id].write_set.append(op)
-            # else:
-            #     transaction_ts[op.transaction_id].validationTS = schedule.operations.index(schedule.transactions)
-
-        executedOperations = []
-        executedTr: List[Transaction] = []
 
         # Validation phase
         for tr in schedule.transactions.keys():
             print(f"Validating transaction {tr}...")
+
+            # Set validationTS in the time commit
             transaction_ts[tr].validationTS = schedule.operations.index(schedule.transactions[tr].operations[-1])
+
+            # If first transaction, automatically validated
             if transaction_ts[tr].isFirstTr:
-                # for op in schedule.operations:
-                #     if op.transaction_id == tr.id:
-                #         executedOperations.append(op)
                 transaction_ts[tr].finishTS = transaction_ts[tr].validationTS
                 executedTr.append(schedule.transactions[tr])
                         
             else:
                 success = False
-                while not success:
-                    # Check if data used was updated in previous transaction
 
+                # Keep rollingback everytime aborted
+                while not success:
+
+                    # Check if data used was updated in previous transaction
                     for executed in executedTr:
-                        # print(executed)
-                        # print("TR:", tr, "compareTR:", executed.id, "finishTS:", transaction_ts[executed.id].finishTS, "startTS:", transaction_ts[tr].startTS, "validTS:", transaction_ts[tr].validationTS)
                         if transaction_ts[executed.id].finishTS < transaction_ts[tr].startTS:
                             success = True
 
@@ -68,25 +68,23 @@ class OptimisticCC(CCStrategy):
                                 success = True
                         else:
                             success = False
-                        # sleep(5)
 
                         if not success:
                             break
                     
+                    # Rollback
                     if not success:
                         print(f"Abort, restarting transaction {tr} at timestamp {transaction_ts[executed.id].finishTS + 1}")
                         transaction_ts[tr].startTS = transaction_ts[executed.id].finishTS + 1
                         transaction_ts[tr].validationTS += (transaction_ts[executed.id].finishTS + 1 - transaction_ts[tr].startTS)
 
+                        # Move operations to the front
                         for op in schedule.transactions[tr].operations:
                             restart: Operation = preExecutedOp.pop(preExecutedOp.index(op))
                             preExecutedOp.append(restart)
+                    # Write Phase
                     else:
-                        for op in schedule.transactions[tr].operations:
-                            executedOperations.append(op)
                         transaction_ts[tr].finishTS = transaction_ts[tr].validationTS
                         executedTr.append(schedule.transactions[tr])
-                    # failed = False
             print(f"Transaction {tr} has been validated, adding to schedule\n")
-        print("Finished schedule:", executedOperations)
         schedule.operations = preExecutedOp
