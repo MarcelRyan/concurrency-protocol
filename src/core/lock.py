@@ -15,7 +15,8 @@ class _LockList:
         self._locks: Dict[int, LockType] = {}
     
     def add(self, transaction_id: int, lock: LockType) -> bool:
-        if self._first is None: self._first = (transaction_id, lock)
+        if self._first is None or self._first[0] == transaction_id:
+            self._first = (transaction_id, lock)
         self._locks[transaction_id] = lock
         return True
     
