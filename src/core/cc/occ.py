@@ -43,7 +43,7 @@ class OptimisticCC(CCStrategy):
         # Validation phase
         for tr in schedule.transactions.keys():
             print(f"Validating transaction {tr}...")
-            transaction_ts[tr].validationTS = schedule.operations.index(schedule.transactions[tr].operations[-2])
+            transaction_ts[tr].validationTS = schedule.operations.index(schedule.transactions[tr].operations[-1])
             if transaction_ts[tr].isFirstTr:
                 # for op in schedule.operations:
                 #     if op.transaction_id == tr.id:
@@ -57,8 +57,8 @@ class OptimisticCC(CCStrategy):
                     # Check if data used was updated in previous transaction
 
                     for executed in executedTr:
-                        print(executed)
-                        # print("TR:", tr.id, "compareTR:", executed.id, "finishTS:", transaction_ts[executed.id].finishTS, "startTS:", transaction_ts[tr.id].startTS, "validTS:", transaction_ts[tr.id].validationTS)
+                        # print(executed)
+                        # print("TR:", tr, "compareTR:", executed.id, "finishTS:", transaction_ts[executed.id].finishTS, "startTS:", transaction_ts[tr].startTS, "validTS:", transaction_ts[tr].validationTS)
                         if transaction_ts[executed.id].finishTS < transaction_ts[tr].startTS:
                             success = True
 
