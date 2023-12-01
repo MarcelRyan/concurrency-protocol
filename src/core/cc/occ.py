@@ -16,9 +16,6 @@ class _State:
         self.read_set = []
         self.write_set: List[Operation] = []
     
-    def __repr__(self) -> str:
-        return f'<{self.data_item}{self.version}, RTS: {self.read_t}, WTS: {self.write_t}>'
-    
 class OptimisticCC(CCStrategy):
     def accept(self, schedule: Schedule) -> None:
         transaction_ts: Dict[int, _State] = dict()
