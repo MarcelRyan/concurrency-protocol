@@ -13,9 +13,22 @@ _STRATEGY_SELECT = {
 }
 _STRATEGY_DEFAULT = '2pl'
 
-parser = ArgumentParser(description='Memprotokolkan sebuah konkurensi')
-parser.add_argument('schedule')
-parser.add_argument('--strategy', '-s', choices=list(_STRATEGY_SELECT.keys()), default=_STRATEGY_DEFAULT)
+parser = ArgumentParser(
+    description=(
+        'Concurrency control protocol implementation that takes in a concurrent'
+        ' schedule and transforms it into an equivalent schedule using a selected'
+        ' concurrency control strategy.'
+    ),
+    epilog='Made with ♡ by K01-G11'
+)
+parser.add_argument('schedule',
+    help='String schedule yang akan diperiksa'
+)
+parser.add_argument('--strategy', '-s',
+    help='Protokol concurrency control yang digunakan',
+    choices=list(_STRATEGY_SELECT.keys()),
+    default=_STRATEGY_DEFAULT
+)
 
 if __name__ == '__main__':
     args = parser.parse_args()
