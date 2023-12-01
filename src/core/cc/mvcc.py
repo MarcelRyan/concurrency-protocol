@@ -18,17 +18,12 @@ class _Version:
 
 class MultiversionTimestampCC(CCStrategy):
     def accept(self, schedule: Schedule) -> None:
-        transaction_ts: Dict[int, int] = dict()
         versions: Dict[str, List[_Version]] = dict()
         abort_set: Set[int] = set()
         commit_set: Set[int] = set()
-
-        # Get the timestamp of all transactions
-        for t in schedule.transactions:
-            transaction_ts[t.id] = t.timestamp
         
         # Get initial timestamp as one unit before the smallest transaction timestamp
-        init_t = min([t for t in transaction_ts.values()]) - 1
+        init_t = min([t for t in list(map(lambda t: t.timestamp, schedule.transactions.values()))]) - 1
         
         # Add all initial versions of each data item
         for op in schedule.operations:
@@ -52,7 +47,7 @@ class MultiversionTimestampCC(CCStrategy):
                     continue
                 
                 # Find the latest version with less or equal WTS to this transaction's TS
-                ts = transaction_ts[op.transaction_id]
+                ts = schedule.transactions[op.transaction_id].timestamp
                 ver = max(
                     filter(
                         lambda v: v.write_t <= ts,
@@ -100,9 +95,8 @@ class MultiversionTimestampCC(CCStrategy):
                 schedule.operations += ops
 
                 # Bump the transaction timestamp
-                new_ts = max(transaction_ts.values()) + 1
-                transaction_ts[id] = new_ts
-                list(filter(lambda t: t, schedule.transactions))[0].timestamp = new_ts
+                new_ts = max(list(map(lambda t: t.timestamp, schedule.transactions.values()))) + 1
+                schedule.transactions[id].timestamp = new_ts
 
                 print(f'    T{id}: Bumped timestamp to {new_ts}, rescheduled {len(ops)} operations')
             abort_set.clear()
