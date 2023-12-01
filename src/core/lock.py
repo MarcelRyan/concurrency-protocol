@@ -25,6 +25,11 @@ class _LockList:
             self._first = None
         elif self._first[0] == transaction_id:
             self._first = list(self._locks.items())[0]
+    
+    def peek_id_except(self, except_id: int = None) -> int:
+        if except_id is None: return self.peek_id
+        ids = list(filter(lambda id: id != except_id, self._locks.keys()))
+        return ids[0] if len(ids) != 0 else None
 
     @property
     def peek_id(self) -> int:
@@ -68,8 +73,9 @@ class LockManager:
                 self.locks[data_item].add(transaction_id, lock_type)
         elif lock_type == LockType.EXCLUSIVE:
             # If an X-lock is requested, grant only if the requester already has an S-lock
+            # and only the requester has a lock on the item
             return \
-                self.locks[data_item].peek_id == transaction_id and \
+                self.locks[data_item].peek_id_except(transaction_id) is None and \
                 self.locks[data_item].peek_lock == LockType.SHARED and \
                 self.locks[data_item].add(transaction_id, lock_type)
         else:
@@ -86,8 +92,8 @@ class LockManager:
         if data_item in self.locks and transaction_id in self.locks[data_item]:
             self.locks[data_item].remove(transaction_id)
     
-    def peek_lock_holder(self, data_item: str) -> int:
-        return self.locks[data_item].peek_id if data_item in self.locks else None
+    def peek_lock_holder(self, data_item: str, except_transaction_id: int = None) -> int:
+        return self.locks[data_item].peek_id_except(except_transaction_id) if data_item in self.locks else None
 
     def release_locks(self, transaction_id: int):
         for data_item in self.locks:
