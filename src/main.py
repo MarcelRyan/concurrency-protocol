@@ -22,10 +22,10 @@ parser = ArgumentParser(
     epilog='Made with ♡ by K01-G11'
 )
 parser.add_argument('schedule',
-    help='String schedule yang akan diperiksa'
+    help='A string containing the schedule to be checked'
 )
 parser.add_argument('--strategy', '-s',
-    help='Protokol concurrency control yang digunakan',
+    help='What concurrency control protocol to use (defaults to 2pl)',
     choices=list(_STRATEGY_SELECT.keys()),
     default=_STRATEGY_DEFAULT
 )
