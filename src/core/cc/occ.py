@@ -23,8 +23,8 @@ class OptimisticCC(CCStrategy):
     def accept(self, schedule: Schedule) -> None:
         transaction_ts: Dict[int, _State] = dict()
 
-        for tr in schedule.transactions:
-            transaction_ts[tr.id] = _State(schedule.operations.index(tr.operations[0]), 0, 0)
+        for tr in schedule.transactions.keys():
+            transaction_ts[tr] = _State(schedule.operations.index(schedule.transactions[tr].operations[0]), 0, 0)
         
         transaction_ts[schedule.operations[0].transaction_id].isFirstTr = True
         preExecutedOp: List[Operation] = schedule.operations
@@ -41,12 +41,15 @@ class OptimisticCC(CCStrategy):
         executedTr: List[Transaction] = []
 
         # Validation phase
-        for tr in schedule.transactions:
-            print(f"Validating transaction {tr.id}...")
-            transaction_ts[tr.id].validationTS = schedule.operations.index(tr.operations[-2])
-            if transaction_ts[tr.id].isFirstTr:
-                transaction_ts[tr.id].finishTS = transaction_ts[tr.id].validationTS
-                executedTr.append(tr)
+        for tr in schedule.transactions.keys():
+            print(f"Validating transaction {tr}...")
+            transaction_ts[tr].validationTS = schedule.operations.index(schedule.transactions[tr].operations[-2])
+            if transaction_ts[tr].isFirstTr:
+                # for op in schedule.operations:
+                #     if op.transaction_id == tr.id:
+                #         executedOperations.append(op)
+                transaction_ts[tr].finishTS = transaction_ts[tr].validationTS
+                executedTr.append(schedule.transactions[tr])
                         
             else:
                 success = False
@@ -54,13 +57,14 @@ class OptimisticCC(CCStrategy):
                     # Check if data used was updated in previous transaction
 
                     for executed in executedTr:
+                        print(executed)
                         # print("TR:", tr.id, "compareTR:", executed.id, "finishTS:", transaction_ts[executed.id].finishTS, "startTS:", transaction_ts[tr.id].startTS, "validTS:", transaction_ts[tr.id].validationTS)
-                        if transaction_ts[executed.id].finishTS < transaction_ts[tr.id].startTS:
+                        if transaction_ts[executed.id].finishTS < transaction_ts[tr].startTS:
                             success = True
 
-                        elif transaction_ts[tr.id].startTS < transaction_ts[executed.id].finishTS < transaction_ts[tr.id].validationTS:
+                        elif transaction_ts[tr].startTS < transaction_ts[executed.id].finishTS < transaction_ts[tr].validationTS:
                             for execWrite in transaction_ts[executed.id].write_set:
-                                if execWrite.data_item in [op.data_item for op in tr.operations]:
+                                if execWrite.data_item in [op.data_item for op in schedule.transactions[tr].operations]:
                                     print(f"Operation intersect detected with {execWrite} from transaction {executed.id}")
                                     success = False
                                     break
@@ -73,19 +77,19 @@ class OptimisticCC(CCStrategy):
                             break
                     
                     if not success:
-                        print(f"Abort, restarting transaction {tr.id} at timestamp {transaction_ts[executed.id].finishTS + 1}")
-                        transaction_ts[tr.id].startTS = transaction_ts[executed.id].finishTS + 1
-                        transaction_ts[tr.id].validationTS += (transaction_ts[executed.id].finishTS + 1 - transaction_ts[tr.id].startTS)
+                        print(f"Abort, restarting transaction {tr} at timestamp {transaction_ts[executed.id].finishTS + 1}")
+                        transaction_ts[tr].startTS = transaction_ts[executed.id].finishTS + 1
+                        transaction_ts[tr].validationTS += (transaction_ts[executed.id].finishTS + 1 - transaction_ts[tr].startTS)
 
-                        for op in tr.operations:
+                        for op in schedule.transactions[tr].operations:
                             restart: Operation = preExecutedOp.pop(preExecutedOp.index(op))
                             preExecutedOp.append(restart)
                     else:
-                        for op in tr.operations:
+                        for op in schedule.transactions[tr].operations:
                             executedOperations.append(op)
-                        transaction_ts[tr.id].finishTS = transaction_ts[tr.id].validationTS + 1
-                        executedTr.append(tr)
+                        transaction_ts[tr].finishTS = transaction_ts[tr].validationTS
+                        executedTr.append(schedule.transactions[tr])
                     # failed = False
-            print(f"Transaction {tr.id} has been validated, adding to schedule\n")
+            print(f"Transaction {tr} has been validated, adding to schedule\n")
         print("Finished schedule:", executedOperations)
         schedule.operations = preExecutedOp
