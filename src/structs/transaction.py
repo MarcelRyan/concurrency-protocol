@@ -63,11 +63,14 @@ class Operation:
     def __repr__(self) -> str:
         return str(self)
 
-class Transaction:
+class Transaction:  
+    _transactions = {}
+    
     def __init__(self, id: int, timestamp: int, operations: List[Operation]) -> None:
         self._id = id
         self.timestamp = timestamp
         self.operations = operations
+        Transaction._transactions[id] = self 
     
     @property
     def id(self) -> int:
@@ -88,3 +91,17 @@ class Transaction:
     @operations.setter
     def operations(self, value: List[Operation]) -> None:
         self._operations = value
+        
+    def get(cls, transaction_id: int):
+        return cls._transactions.get(transaction_id)
+    
+    def get_data_items(self):
+        data_items = [operation.data_item for operation in self.operations if operation.data_item is not None]
+
+        # Print debugging information for each operation's data_item
+        for operation in self.operations:
+            print(f"Transaction {self.id} - Operation {operation}")
+            if operation.data_item is not None:
+                print(f"Transaction {self.id} - Operation {operation} - Data Item: {operation.data_item}")
+
+        return data_items
