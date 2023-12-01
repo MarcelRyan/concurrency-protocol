@@ -20,6 +20,6 @@ class TestSchedule:
 
         assert len(s.transactions) == len(expected_ids)
         for id in expected_ids:
-            assert len(list(filter(lambda t: t.id == id, s.transactions)))
+            assert len(list(filter(lambda t: t.id == id, s.transactions.values())))
         for i in range(len(test_list)):
             assert s.operations[i] == test_list[i]

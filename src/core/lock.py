@@ -1,8 +1,9 @@
 try:
-    from typing import Dict, Tuple
+    from typing import Dict, Tuple, Optional, List
 except ImportError:
     from typing_extensions import Dict, Tuple
 from enum import Enum
+from structs.transaction import Transaction
 
 class LockType(Enum):
     SHARED = 1
@@ -20,15 +21,24 @@ class _LockList:
     
     def remove(self, transaction_id: int):
         del self._locks[transaction_id]
-        if len(self._locks) == 0: self._first = None
+        if len(self._locks) == 0:
+            self._first = None
+        elif self._first[0] == transaction_id:
+            self._first = list(self._locks.items())[0]
 
     @property
     def peek_id(self) -> int:
-        return self._first[0]
+        return self._first[0] if self._first is not None else None
 
     @property
     def peek_lock(self) -> LockType:
         return self._first[1]
+    
+    def __getitem__(self, key: int) -> LockType:
+        return self._locks[key]
+
+    def __contains__(self, key: int) -> bool:
+        return key in self._locks
     
     def __len__(self) -> int:
         return len(self._locks)
@@ -39,8 +49,12 @@ class LockManager:
     
     def grant_lock(self, data_item: str, lock_type: LockType, transaction_id: int):
         # If there is no lock list on this data item yet, create a new lock list
-        if data_item not in self.locks.keys():
+        if data_item not in self.locks:
             self.locks[data_item] = _LockList()
+        
+        # If the transaction already has a sufficient lock, do nothing
+        if self.has_lock(data_item, lock_type, transaction_id):
+            return True
         
         # If this data item has no locks, grant lock
         if len(self.locks[data_item]) == 0:
@@ -61,7 +75,20 @@ class LockManager:
         else:
             # How the hell did you get here?????
             raise RuntimeError('What?')
+    
+    def has_lock(self, data_item: str, lock_type: LockType, transaction_id: int) -> bool:
+        if data_item not in self.locks: return False
+        if transaction_id not in self.locks[data_item]: return False
+        lock = self.locks[data_item][transaction_id]
+        return lock == LockType.EXCLUSIVE or lock_type == LockType.SHARED
 
     def release_lock(self, data_item: str, transaction_id: int):
-        if data_item in self.locks and self.locks[data_item].peek_id == transaction_id:
+        if data_item in self.locks and transaction_id in self.locks[data_item]:
             self.locks[data_item].remove(transaction_id)
+    
+    def peek_lock_holder(self, data_item: str) -> int:
+        return self.locks[data_item].peek_id if data_item in self.locks else None
+
+    def release_locks(self, transaction_id: int):
+        for data_item in self.locks:
+            self.release_lock(data_item, transaction_id)
