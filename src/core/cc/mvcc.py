@@ -34,7 +34,7 @@ class MultiversionTimestampCC(CCStrategy):
         print('Beginning MVCC protocol...')
         i = 0
         sched_len = len(schedule.operations)
-        for i in range(sched_len):
+        while i < sched_len:
             op = schedule.operations[i]
 
             # Check the type of this operation
